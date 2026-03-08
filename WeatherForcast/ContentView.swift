@@ -1,77 +1,132 @@
-//
 //  ContentView.swift
 //  WeatherForcast
-//
-//  Created by WayneHsiao on 2026/03/08.
-//
 
 import SwiftUI
 
+/// Main view – demonstrates the date‑picker range, arrow navigation,
+/// and dynamic weather data based on the selected hour.
 struct ContentView: View {
     @StateObject private var viewModel = WeatherViewModel()
     @State private var inputCity: String = ""
-    
-    // Formatter for the selected time
-    let dateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .short
-        formatter.timeStyle = .short
-        formatter.locale = Locale(identifier: "en_US")
-        return formatter
-    }()
-    
-    // Formatter to parse Open-Meteo's API string into a Date
-    // Open-Meteo sends format: "2026-03-07T02:00"
-    let apiDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm"
-        formatter.timeZone = TimeZone(secondsFromGMT: 0)
-        return formatter
+    @State private var selectedDate = Date()
+
+    // MARK: Formatters
+    private let dateFormatter: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.dateStyle = .short
+        fmt.timeStyle = .short
+        fmt.locale = Locale(identifier: "en_US")
+        return fmt
     }()
 
+    private let apiDateFormatter: DateFormatter = {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "yyyy-MM-dd'T'HH:mm"
+        fmt.timeZone = TimeZone(secondsFromGMT: 0)
+        return fmt
+    }()
+
+    // MARK: Body
     var body: some View {
         VStack(spacing: 20) {
-            // 1. Search Bar
-            HStack {
-                Image(systemName: "magnifyingglass")
-                TextField("Search city", text: $inputCity)
-                    .onSubmit {
-                        if !inputCity.isEmpty {
-                            viewModel.searchCity(inputCity)
-                            inputCity = ""
-                        }
-                    }
-                if viewModel.isSearching {
-                    ProgressView()
-                }
+            // 0️⃣ Search bar
+            searchBar
+
+            // 1️⃣ Date picker – full forecast range
+            if let forecast = viewModel.hourlyForecast,
+               let dateRange = forecastRange(for: forecast) {
+                datePicker(forecast: forecast, dateRange: dateRange)
             }
-            .padding(8)
-            .background(Color(.systemGray6))
-            .cornerRadius(10)
-            .padding(.horizontal)
-            
-            // 2. Time Navigation Controls
-            if let _ = viewModel.hourlyForecast {
+
+            // 2️⃣ Time navigation controls
+            timeNavigationControls
+
+            // 3️⃣ City name
+            cityName
+
+            // 4️⃣ Weather display
+            weatherDisplay
+
+            Spacer()
+        }
+        .padding(20)
+        .onChange(of: viewModel.selectedHourIndex) { _ in
+            updateSelectedDateFromModel()
+        }
+        .onAppear {
+            // If no forecast is present, start with a sensible default.
+            if viewModel.hourlyForecast == nil {
+                // Use the city stored in UserDefaults or fall back to a hard‑coded city.
+                let defaultCity = UserDefaults.standard.string(forKey: "lastCity") ?? "San Francisco"
+                viewModel.searchCity(defaultCity)
+            }
+            // Keep the picker in sync after any data load.
+            updateSelectedDateFromModel()
+        }
+    }
+
+    // MARK: --- Sub‑Views
+
+    private var searchBar: some View {
+        HStack {
+            Image(systemName: "magnifyingglass")
+            TextField("Search city", text: $inputCity)
+                .onSubmit {
+                    if !inputCity.isEmpty {
+                        viewModel.searchCity(inputCity)
+                        inputCity = ""
+                    }
+                }
+            if viewModel.isSearching { ProgressView() }
+        }
+        .padding(8)
+        .background(Color(.systemGray6))
+        .cornerRadius(10)
+        .padding(.horizontal)
+    }
+
+    private func datePicker(forecast: WeatherHourForecast, dateRange: ClosedRange<Date>) -> some View {
+        DatePicker(
+            "Select Date & Time",
+            selection: $selectedDate,
+            in: dateRange,
+            displayedComponents: [.date, .hourAndMinute]
+        )
+        .datePickerStyle(.compact)
+        .padding(.horizontal)
+        .onChange(of: selectedDate) { newDate in
+            updateSelectedIndexFromDate(newDate, forecast: forecast)
+        }
+    }
+
+    // MARK: - Updated
+    private var timeNavigationControls: some View {
+        Group { // Wrap the conditional in a Group to satisfy `some View`
+            if viewModel.hourlyForecast != nil {
                 HStack {
-                    Button(action: { viewModel.changeTimeSelection(delta: -1) }) {
+                    Button { viewModel.changeTimeSelection(delta: -1) } label: {
                         Image(systemName: "chevron.left")
                     }
-                    .disabled(viewModel.selectedHourIndex - 1 < 0)
-                    
-                    // Helper text
+                    .disabled(viewModel.selectedHourIndex <= 0)
+
                     Text("Current Selection")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                    
-                    Button(action: { viewModel.changeTimeSelection(delta: 1) }) {
+
+                    Button { viewModel.changeTimeSelection(delta: 1) } label: {
                         Image(systemName: "chevron.right")
                     }
                     .disabled(viewModel.selectedHourIndex + 1 >= (viewModel.hourlyForecast?.time.count ?? 0))
                 }
                 .padding(.horizontal, 10)
+            } else {
+                EmptyView()
             }
-            
-            // 3. City Name Display
+        }
+    }
+
+    private var cityName: some View {
+        Group {
             if !viewModel.city.isEmpty {
                 Spacer()
                 Text(viewModel.city)
@@ -79,47 +134,96 @@ struct ContentView: View {
                     .fontWeight(.bold)
                     .foregroundStyle(.primary)
                     .multilineTextAlignment(.center)
+            } else {
+                EmptyView()
             }
-            
-            // 4. Weather Display
+        }
+    }
+
+    private var weatherDisplay: some View {
+        Group {
             if viewModel.isLoading {
                 ProgressView("Fetching weather data...")
             } else if let error = viewModel.errorMessage {
                 Text(error)
                     .foregroundColor(.red)
                     .multilineTextAlignment(.center)
-            } else if let temp = viewModel.temperature, let code = viewModel.weatherCode {
-                VStack(spacing: 15) {
-                    // Date Indicator
-                    if let selectedTimeString = viewModel.hourlyForecast?.time[viewModel.selectedHourIndex],
-                       let dateObj = apiDateFormatter.date(from: selectedTimeString) {
-                        Text(dateFormatter.string(from: dateObj))
-                            .font(.headline)
-                            .foregroundStyle(.blue)
-                    }
-                    
-                    // Main Icon
-                    Image(systemName: viewModel.getWeatherIcon(code: code))
-                        .font(.system(size: 70))
-                        .foregroundStyle(.blue)
-                    
-                    // Main Temperature
-                    Text("\(Int(temp))°C")
-                        .font(.system(size: 80, weight: .bold, design: .rounded))
-                    
-                    // Weather Description
-                    Text(viewModel.getWeatherDescription(code: code))
-                        .font(.title3)
-                        .foregroundStyle(.secondary)
-                }
-                .transition(.opacity)
+            } else if let temp = viewModel.temperature,
+                      let code = viewModel.weatherCode {
+                weatherComponents(temp: temp, code: code)
             } else {
                 Text("No data found")
             }
-            
-            Spacer()
         }
-        .padding(20)
+    }
+
+    private func weatherComponents(temp: Double, code: Int) -> some View {
+        VStack(spacing: 15) {
+            // Date indicator
+            if let timeStr = viewModel.hourlyForecast?.time[viewModel.selectedHourIndex],
+               let dateObj = apiDateFormatter.date(from: timeStr) {
+                Text(dateFormatter.string(from: dateObj))
+                    .font(.headline)
+                    .foregroundStyle(.blue)
+            }
+
+            // Icon
+            Image(systemName: viewModel.getWeatherIcon(code: code))
+                .font(.system(size: 70))
+                .foregroundStyle(.blue)
+
+            // Temperature
+            Text("\(Int(temp))°C")
+                .font(.system(size: 80, weight: .bold, design: .rounded))
+
+            // Description
+            Text(viewModel.getWeatherDescription(code: code))
+                .font(.title3)
+                .foregroundStyle(.secondary)
+        }
+        .transition(.opacity)
+    }
+
+    // MARK: --- Helpers
+
+    /// Builds the closed range that covers the entire forecast period.
+    private func forecastRange(for forecast: WeatherHourForecast) -> ClosedRange<Date>? {
+        let dates = forecast.time.compactMap { apiDateFormatter.date(from: $0) }
+        guard let min = dates.min(), let max = dates.max() else { return nil }
+        return min...max
+    }
+
+    /// When the `ViewModel` changes its index, update the DatePicker’s selection.
+    private func updateSelectedDateFromModel() {
+        // 1️⃣ Ensure we have a forecast and the index is valid.
+        guard let forecast = viewModel.hourlyForecast,
+              viewModel.selectedHourIndex < forecast.time.count else {
+            return
+        }
+
+        // 2️⃣ Grab the string at the selected index.
+        let dateStr = forecast.time[viewModel.selectedHourIndex]
+
+        // 3️⃣ Convert that string into a Date (optional), and set the picker.
+        guard let date = apiDateFormatter.date(from: dateStr) else {
+            return
+        }
+
+        selectedDate = date
+    }
+
+    /// Called when the user picks a new date from the picker.
+    private func updateSelectedIndexFromDate(_ date: Date, forecast: WeatherHourForecast) {
+        for (idx, timeStr) in forecast.time.enumerated() {
+            guard let timeDate = apiDateFormatter.date(from: timeStr) else { continue }
+            if Calendar.current.isDate(timeDate, inSameDayAs: date) &&
+                Calendar.current.component(.hour, from: timeDate) == Calendar.current.component(.hour, from: date) {
+
+                viewModel.selectedHourIndex = idx
+                viewModel.updateTemperatureAndCode(index: idx)
+                break
+            }
+        }
     }
 }
 
