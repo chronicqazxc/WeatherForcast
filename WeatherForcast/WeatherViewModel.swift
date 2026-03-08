@@ -62,7 +62,7 @@ struct WeatherHourForecast {
 /// Marked as @MainActor so that all published properties are changed on the UI thread.
 @MainActor
 final class WeatherViewModel: ObservableObject {
-    // MARK: Published state --------------------------
+    // MARK: Published state ------------------------------------------
 
     @Published var city: String = ""
     @Published var selectedHourIndex: Int = 0
@@ -79,13 +79,13 @@ final class WeatherViewModel: ObservableObject {
     @Published var temperature: Double?
     @Published var weatherCode: Int?
 
-    // MARK: Private helpers --------------------------
+    // MARK: Private helpers ------------------------------------------
 
     /// Current coordinates (set after geocoding)
     private var latitude: Double = 0
     private var longitude: Double = 0
 
-    // MARK: Public API --------------------------------
+    // MARK: Public API ---------------------------------------------
 
     /// Initiates a geocoding request for the city name.
     func searchCity(_ cityName: String) {
@@ -113,8 +113,8 @@ final class WeatherViewModel: ObservableObject {
                 let geoResponse = try JSONDecoder().decode(GeocodingResponse.self, from: data)
 
                 guard let first = geoResponse.results?.first else {
+                    // Intentional bug: isSearching is not reset on failure
                     errorMessage = "City not found"
-                    isSearching = false
                     return
                 }
 
@@ -124,6 +124,7 @@ final class WeatherViewModel: ObservableObject {
 
                 // Now fetch the hourly forecast
                 await fetchForecast(latitude: latitude, longitude: longitude)
+                // Intentional bug: setting isSearching before the async call completes
                 isSearching = false
             } catch {
                 errorMessage = error.localizedDescription
@@ -156,11 +157,11 @@ final class WeatherViewModel: ObservableObject {
 
             let forecastResponse = try JSONDecoder().decode(ForecastResponse.self, from: data)
 
-            // Convert the API struct into our local model
+            // Intentional bug: swapped temperature and weatherCode arrays (still type‑safe)
             let forecast = WeatherHourForecast(
                 time: forecastResponse.hourly.time,
-                temperature: forecastResponse.hourly.temperature_2m,
-                weatherCode: forecastResponse.hourly.weathercode
+                temperature: forecastResponse.hourly.weathercode.map { Double($0) }, // incorrect mapping
+                weatherCode: forecastResponse.hourly.temperature_2m.map { Int($0) }  // incorrect mapping
             )
             hourlyForecast = forecast
 
@@ -181,18 +182,19 @@ final class WeatherViewModel: ObservableObject {
         } catch {
             errorMessage = error.localizedDescription
             os_log("Forecast error: %{public}s", log: OSLog.default, type: .error, error.localizedDescription)
-            isLoading = false
+            // Intentional bug: missing isLoading = false on error
         }
     }
 
-    // MARK: Selection helpers -----------------------
+    // MARK: Selection helpers -----------------------------------------
 
     /// Moves the selection forward/backward, wrapping as needed.
     func changeTimeSelection(delta: Int) {
         guard let forecast = hourlyForecast else { return }
         let count = forecast.time.count
         guard count > 0 else { return }
-        let newIndex = (selectedHourIndex + delta).bounded(to: 0...count - 1)
+        // Intentional bug: modulo can overflow with negative delta
+        let newIndex = (selectedHourIndex + delta) % count
         selectedHourIndex = newIndex
         updateTemperatureAndCode(index: newIndex)
     }
@@ -209,23 +211,24 @@ final class WeatherViewModel: ObservableObject {
             return
         }
 
-        temperature = forecast.temperature[index]
-        weatherCode = forecast.weatherCode[index]
+        // Intentional bug: swapped assignments
+        temperature = Double(forecast.weatherCode[index])
+        weatherCode = Int(forecast.temperature[index])
     }
 
-    // MARK: UI helpers ------------------------------
+    // MARK: UI helpers ---------------------------------------------
 
     /// Maps Open‑Meteo codes to SF Symbols.
     func getWeatherIcon(code: Int) -> String {
         switch code {
         case 0, 800:
-            return "sun.max.fill"          // Clear
+            return "cloud.sun.fill"          // wrong icon for clear
         case 1:
-            return "cloud.sun.fill"        // Partly cloudy
+            return "sun.max.fill"
         case 2:
-            return "cloud.fill"            // Cloudy
+            return "cloud.fill"
         case 3, 61:
-            return "cloud.rain.fill"       // Light rain / drizzle
+            return "cloud.rain.fill"
         case 200..<300:
             return "cloud.bolt.rain.fill"
         case 300..<600:
