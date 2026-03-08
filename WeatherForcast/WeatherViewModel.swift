@@ -94,7 +94,8 @@ class WeatherViewModel: ObservableObject {
                     self.latitude = firstResult.latitude
                     self.longitude = firstResult.longitude
                     self.city = firstResult.name
-                    await self.fetchForecast(latitude: self.latitude, longitude: self.longitude)
+                    self.fetchForecast(latitude: self.latitude, longitude: self.longitude)
+                    self.isSearching = false
                 } else {
                     DispatchQueue.main.async {
                         self.errorMessage = "City not found"
