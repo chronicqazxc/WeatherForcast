@@ -1,22 +1,20 @@
 name: PR Assistant
 
 on:
-  pull_request:
-    types: [opened, synchronize]
   issue_comment:
     types: [created]
 
 jobs:
   pr-assistant:
     if: >
-      github.event_name == 'issue_comment' && contains(github.event.comment.body, 'DangerCI001')
+      contains(github.event.comment.body, vars.TRIGGER_KEYWORD)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
       - name: Clone PR Assistant
         uses: actions/checkout@v4
         with:
-          repository: ${{ secrets.PR_ASSISTANT_REPO }}
+          repository: ${{ vars.PR_ASSISTANT_REPO }}
           path: pr-assistant
           ref: main
           sparse-checkout: |
@@ -27,18 +25,28 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: "3.11"
 
       - name: Install dependencies
         run: pip install uv && uv sync
 
       - name: Setup environment
-        run: bash pr-assistant/scripts/github/01-setup-environment.sh
+        run: |
+          # Create .env file from secrets/variables
+          cat > .env << EOF
+          LLM_PROVIDER=${{ vars.LLM_PROVIDER }}
+          OLLAMA_BASE_URL=${{ vars.OLLAMA_BASE_URL }}
+          OLLAMA_MODEL=${{ vars.OLLAMA_MODEL }}
+          ANTHROPIC_API_KEY=${{ secrets.ANTHROPIC_API_KEY }}
+          ANTHROPIC_MODEL=${{ vars.ANTHROPIC_MODEL }}
+          GOOGLE_API_KEY=${{ secrets.GOOGLE_API_KEY }}
+          GEMINI_MODEL=${{ vars.GEMINI_MODEL }}
+          TRIGGER_KEYWORD=${{ vars.TRIGGER_KEYWORD }}
+          EOF
+          bash pr-assistant/scripts/github/01-setup-environment.sh
         env:
-          PR_URL: ${{ github.event.pull_request.html_url || github.event.issue.html_url }}
+          PR_URL: ${{ github.event.issue.html_url }}
           USER: ${{ github.actor }}
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          LLM_PROVIDER: ${{ secrets.LLM_PROVIDER }}
 
       - name: Prefetch data
         run: bash pr-assistant/scripts/github/02-prefetch-data.sh
