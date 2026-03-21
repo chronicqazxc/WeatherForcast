@@ -32,7 +32,7 @@ jobs:
       TRIGGER_KEYWORD: ${{ vars.TRIGGER_KEYWORD }}
       # Build PR URL with comment anchor
       PR_URL: ${{ github.event.comment.html_url }}
-      GITHUB_USER: ${{ github.actor }}
+      USER: ${{ github.actor }}
 
     steps:
       - name: Clone PR Assistant
