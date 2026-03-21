@@ -10,7 +10,25 @@
 		BB51E5A82F5D2CF400A4B42C /* WeatherForcast.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = WeatherForcast.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		BBC222B12F6EECF9005BCC78 /* Exceptions for ".github" folder in "WeatherForcast" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"pr-assistant.yml",
+			);
+			target = BB51E5A72F5D2CF400A4B42C /* WeatherForcast */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		BB2FDD232F64445F0097B8C5 /* .github */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				BBC222B12F6EECF9005BCC78 /* Exceptions for ".github" folder in "WeatherForcast" target */,
+			);
+			path = .github;
+			sourceTree = "<group>";
+		};
 		BB51E5AA2F5D2CF400A4B42C /* WeatherForcast */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = WeatherForcast;
@@ -32,6 +50,7 @@
 		BB51E59F2F5D2CF400A4B42C = {
 			isa = PBXGroup;
 			children = (
+				BB2FDD232F64445F0097B8C5 /* .github */,
 				BB51E5AA2F5D2CF400A4B42C /* WeatherForcast */,
 				BB51E5A92F5D2CF400A4B42C /* Products */,
 			);
@@ -61,6 +80,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				BB2FDD232F64445F0097B8C5 /* .github */,
 				BB51E5AA2F5D2CF400A4B42C /* WeatherForcast */,
 			);
 			name = WeatherForcast;
