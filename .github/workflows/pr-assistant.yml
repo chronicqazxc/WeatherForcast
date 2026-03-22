@@ -40,7 +40,7 @@ jobs:
 
     steps:
       - name: Clone PR Assistant
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           repository: ${{ vars.PR_ASSISTANT_REPO }}
           path: pr-assistant
