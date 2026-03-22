@@ -13,14 +13,12 @@ permissions:
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-  TRIGGER_KEYWORD: 'github-bot'
 
 jobs:
   pr-assistant:
-    # Use env.TRIGGER_KEYWORD instead of vars.TRIGGER_KEYWORD
     if: >
-      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, env.TRIGGER_KEYWORD)) ||
-      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, env.TRIGGER_KEYWORD))
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, vars.TRIGGER_KEYWORD_FOR_NO_BOT)) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, vars.TRIGGER_KEYWORD_FOR_NO_BOT))
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -33,11 +31,10 @@ jobs:
       ANTHROPIC_MODEL: ${{ vars.ANTHROPIC_MODEL }}
       GOOGLE_API_KEY: ${{ secrets.GOOGLE_API_KEY }}
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL }}
-      # Point this to the env variable defined above
-      TRIGGER_KEYWORD: ${{ env.TRIGGER_KEYWORD }}
+      TRIGGER_KEYWORD: ${{ vars.TRIGGER_KEYWORD_FOR_NO_BOT }}
       PR_URL: ${{ github.event.comment.html_url }}
       USER: ${{ github.actor }}
-      PR_ASSISTANT_REPO_URL: https://github.com/${{ vars.PR_ASSISTANT_REPO }}
+      PR_ASSISTANT_REPO_URL: https://github.com{{ vars.PR_ASSISTANT_REPO }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     steps:
@@ -67,7 +64,6 @@ jobs:
       - name: Setup environment
         run: |
           cd pr-assistant
-          # The variables are already exported to the shell via the job's env block
           cat > .env << EOF
           GH_TOKEN=$GH_TOKEN
           LLM_PROVIDER=$LLM_PROVIDER
