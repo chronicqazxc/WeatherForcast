@@ -14,6 +14,7 @@
 		BBC222B62F6EF92D005BCC78 /* Exceptions for ".github" folder in "WeatherForcast" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
+				"workflows/pr-assistant-without-bot-account.yml",
 				"workflows/pr-assistant.yml",
 			);
 			target = BB51E5A72F5D2CF400A4B42C /* WeatherForcast */;
