@@ -89,3 +89,15 @@ jobs:
         run: |
           cd pr-assistant
           bash scripts/github/03-run-review.sh
+          
+      - name: Post failure comment
+        if: failure()
+        run: |
+          cd pr-assistant
+          cat > .env << EOF
+          GH_TOKEN=$GH_TOKEN
+          PR_ASSISTANT_REPO_URL=$PR_ASSISTANT_REPO_URL
+          RUN_URL=$RUN_URL
+          USER=$USER
+          EOF
+          bash scripts/github/post-failure-comment.sh
