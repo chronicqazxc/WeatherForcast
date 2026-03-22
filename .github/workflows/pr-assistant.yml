@@ -17,12 +17,9 @@ env:
 jobs:
   pr-assistant:
     # Trigger if keyword is in a PR conversation comment OR an inline diff comment
-    # Exclude comments made by the bot itself to prevent infinite loops
     if: >
-      github.event.comment.user.login != vars.TRIGGER_KEYWORD && (
-        (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, vars.TRIGGER_KEYWORD)) ||
-        (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, vars.TRIGGER_KEYWORD))
-      )
+      (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, vars.TRIGGER_KEYWORD)) ||
+      (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, vars.TRIGGER_KEYWORD))
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
