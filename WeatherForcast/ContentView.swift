@@ -6,6 +6,7 @@ import SwiftUI
 /// Main view – demonstrates the date‑picker range, arrow navigation,
 /// and dynamic weather data based on the selected hour.
 struct ContentView: View {
+    var viewModel = WeatherViewModel()
     @StateObject private var viewModel = WeatherViewModel()
     @State private var inputCity: String = ""
     @State private var selectedDate = Date()
