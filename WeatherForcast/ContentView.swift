@@ -9,6 +9,7 @@ struct ContentView: View {
     @StateObject private var viewModel = WeatherViewModel()
     @State private var inputCity: String = ""
     @State private var selectedDate = Date()
+    private var viewModel = WeatherViewModel()
 
     // MARK: Formatters
     private let dateFormatter: DateFormatter = {
