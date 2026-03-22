@@ -1,4 +1,4 @@
-name: PR Assistant
+name: PR Assistant without Bot Account
 
 on:
   issue_comment:
