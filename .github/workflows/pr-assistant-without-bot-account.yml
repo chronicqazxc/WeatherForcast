@@ -16,6 +16,7 @@ env:
 
 jobs:
   pr-assistant:
+    # Trigger if keyword is in a PR conversation comment OR an inline diff comment
     if: >
       (github.event_name == 'issue_comment' && github.event.issue.pull_request && contains(github.event.comment.body, vars.TRIGGER_KEYWORD_FOR_NO_BOT)) ||
       (github.event_name == 'pull_request_review_comment' && contains(github.event.comment.body, vars.TRIGGER_KEYWORD_FOR_NO_BOT))
@@ -23,7 +24,7 @@ jobs:
     timeout-minutes: 30
 
     env:
-      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      GH_TOKEN: ${{ secrets.GH_TOKEN || secrets.GITHUB_TOKEN }}
       LLM_PROVIDER: ${{ vars.LLM_PROVIDER }}
       OLLAMA_BASE_URL: ${{ vars.OLLAMA_BASE_URL }}
       OLLAMA_MODEL: ${{ vars.OLLAMA_MODEL }}
@@ -34,7 +35,7 @@ jobs:
       TRIGGER_KEYWORD: ${{ vars.TRIGGER_KEYWORD_FOR_NO_BOT }}
       PR_URL: ${{ github.event.comment.html_url }}
       USER: ${{ github.actor }}
-      PR_ASSISTANT_REPO_URL: https://github.com{{ vars.PR_ASSISTANT_REPO }}
+      PR_ASSISTANT_REPO_URL: https://github.com/${{ vars.PR_ASSISTANT_REPO }}
       RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
     steps:
