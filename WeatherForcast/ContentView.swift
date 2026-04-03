@@ -7,7 +7,7 @@ import SwiftUI
 /// and dynamic weather data based on the selected hour.
 struct ContentView: View {
     @StateObject private var viewModel = WeatherViewModel()
-    @State private var inputCity: String = ""
+    @State private var inputCity: SString = ""
     @State private var selectedDate = Date()
 
     // MARK: Formatters
